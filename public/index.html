@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FF Player Stats</title>
+<style>
+  :root { --bg:#0e1116; --card:#181d26; --line:#2a3242; --text:#e8ecf3; --mute:#8b95a7; --accent:#ff6a1a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,"Noto Sans Bengali",sans-serif; }
+  .wrap { max-width:560px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { font-size:22px; margin:8px 0 4px; }
+  .sub { color:var(--mute); font-size:14px; margin-bottom:18px; }
+  form { display:flex; gap:8px; flex-wrap:wrap; }
+  input, select, button { font:inherit; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); padding:12px; }
+  input { flex:1 1 180px; }
+  button { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  .msg { margin-top:16px; color:var(--mute); }
+  .err { color:#ff6b6b; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:16px; }
+  .name { font-size:20px; font-weight:700; }
+  .meta { color:var(--mute); font-size:13px; margin-top:4px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .stat { background:#11151c; border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .stat b { display:block; font-size:20px; margin-top:2px; }
+  .stat span { color:var(--mute); font-size:12px; }
+  .bar { height:8px; background:#11151c; border-radius:99px; overflow:hidden; margin-top:6px; }
+  .bar i { display:block; height:100%; background:var(--accent); }
+  .tag { display:inline-block; background:#3a2a10; color:#ffb347; font-size:12px; padding:3px 8px; border-radius:99px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔥 Free Fire Player Stats</h1>
+  <div class="sub">UID দিন, গেম স্ট্যাটস দেখুন</div>
+  <form id="f">
+    <input id="uid" inputmode="numeric" placeholder="আপনার UID" required>
+    <select id="region">
+      <option>BD</option><option>IND</option><option>SG</option><option>ME</option><option>BR</option><option>ID</option><option>TH</option>
+    </select>
+    <button>খুঁজুন</button>
+  </form>
+  <div id="out"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Number(n).toLocaleString("en-US");
+
+$("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("out").innerHTML = '<div class="msg">লোড হচ্ছে...</div>';
+  try {
+    const r = await fetch(`/api/player?uid=${encodeURIComponent($("uid").value)}&region=${$("region").value}`);
+    const p = await r.json();
+    if (!r.ok) throw new Error(p.error || "সমস্যা হয়েছে");
+    render(p);
+  } catch (err) {
+    $("out").innerHTML = `<div class="msg err">${err.message}</div>`;
+  }
+});
+
+function stat(label, value) {
+  return `<div class="stat"><span>${label}</span><b>${value}</b></div>`;
+}
+
+function render(p) {
+  $("out").innerHTML = `
+    <div class="card">
+      <div class="name">${p.name}</div>
+      <div class="meta">UID: ${p.uid} • লেভেল ${p.level} • ${p.region} • গিল্ড: ${p.guild}</div>
+      ${p.demo ? '<span class="tag">ডেমো ডেটা (আসল API সেট করা হয়নি)</span>' : ""}
+      <div class="grid">
+        ${stat("মোট ম্যাচ", fmt(p.matches))}
+        ${stat("জয় (Booyah)", fmt(p.wins))}
+        ${stat("উইন রেট", p.winRate.toFixed(2) + "%")}
+        ${stat("K/D", p.kd)}
+        ${stat("মোট কিল", fmt(p.kills))}
+        ${stat("প্রতি ম্যাচে কিল", p.avgKills)}
+        ${stat("হেডশট", fmt(p.headshots))}
+        ${stat("হেডশট রেট", p.headshotRate.toFixed(2) + "%")}
+        ${stat("র‍্যাঙ্ক (BR)", p.rank)}
+        ${stat("র‍্যাঙ্ক পয়েন্ট", fmt(p.rankPoints))}
+        ${stat("CS র‍্যাঙ্ক", p.csRank)}
+        ${stat("লাইক", fmt(p.likes))}
+      </div>
+      <div style="margin-top:14px;font-size:13px;color:var(--mute)">হেডশট রেট</div>
+      <div class="bar"><i style="width:${Math.min(p.headshotRate,100)}%"></i></div>
+    </div>`;
+}
+</script>
+</body>
+</html>
